@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/micro/cli"
 	"github.com/micro/go-micro"
 	"github.com/micro/go-micro/cmd"
@@ -30,10 +29,6 @@ type Sidecar struct {
 	hcUrl   string
 }
 
-type srv struct {
-	*mux.Router
-}
-
 var (
 	BrokerPath   = "/broker"
 	HealthPath   = "/health"
@@ -41,24 +36,6 @@ var (
 	RPCPath      = "/rpc"
 	CORS         = map[string]bool{"*": true}
 )
-
-func (s *srv) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if origin := r.Header.Get("Origin"); CORS[origin] {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	} else if len(origin) > 0 && CORS["*"] {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
-
-	if r.Method == "OPTIONS" {
-		return
-	}
-
-	s.Router.ServeHTTP(w, r)
-}
 
 func run(ctx *cli.Context, car *Sidecar) {
 	// Init plugins
@@ -79,8 +56,7 @@ func run(ctx *cli.Context, car *Sidecar) {
 		opts = append(opts, server.TLSConfig(config))
 	}
 
-	r := mux.NewRouter()
-	s := &srv{r}
+	r := http.NewServeMux()
 
 	// new server
 	srv := server.NewServer(Address)
@@ -106,7 +82,7 @@ func run(ctx *cli.Context, car *Sidecar) {
 	log.Printf("Registering Broker handler at %s", BrokerPath)
 	r.Handle(BrokerPath, http.HandlerFunc(handler.Broker))
 
-	var h http.Handler = s
+	var h http.Handler = r
 
 	if ctx.GlobalBool("enable_stats") {
 		st := stats.New()
