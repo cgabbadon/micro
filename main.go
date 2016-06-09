@@ -12,6 +12,9 @@ import (
 	"github.com/micro/micro/new"
 	"github.com/micro/micro/plugin"
 	"github.com/micro/micro/web"
+	_ "github.com/micro/go-plugins/transport/nats"
+	_ "github.com/micro/go-plugins/broker/nats"
+	_ "github.com/micro/go-plugins/registry/nats"
 )
 
 func setup(app *ccli.App) {
